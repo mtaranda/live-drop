@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="lt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Užrakinta žinutė — įveskite 4 skaitmenų PIN</title>
+  <style>
+    :root{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f3f4f6;margin:0;padding:24px}
+    .card{background:#fff;padding:28px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,.08);width:100%;max-width:540px}
+    h1{margin:0 0 8px;font-size:20px}
+    p.sub{margin:0 0 18px;color:#374151}
+    .code-input{display:flex;gap:10px;margin-bottom:12px}
+    input.digit{width:64px;height:64px;border-radius:10px;border:1px solid #e5e7eb;font-size:26px;text-align:center}
+    button{appearance:none;border:0;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+    .message{margin-top:16px;padding:16px;border-radius:8px;border:1px dashed #d1d5db;background:#fafafa;display:none;white-space:pre-line}
+    .hint{font-size:13px;color:#6b7280;margin-top:8px}
+    .actions{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .danger{background:#ef4444}
+    .success{background:#10b981}
+    a.small{font-size:13px;color:#111827;text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Atidaryti žinutę</h1>
+    <p class="sub">Įveskite 4 skaitmenų PIN kodą, kad atskleistumėte užkoduotą žinutę.</p>
+
+    <div class="code-input" id="codeInput">
+      <input inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" id="d0" autocomplete="off" aria-label="PIN digit 1">
+      <input inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" id="d1" autocomplete="off" aria-label="PIN digit 2">
+      <input inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" id="d2" autocomplete="off" aria-label="PIN digit 3">
+      <input inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" id="d3" autocomplete="off" aria-label="PIN digit 4">
+    </div>
+
+    <div class="actions">
+      <button id="unlockBtn">Atidaryti</button>
+      <button id="clearBtn" class="danger">Išvalyti</button>
+      <button id="showHintBtn" title="Rodo užuominą">?</button>
+    </div>
+
+    <div class="hint" id="hintArea">Užuomina: (paspauskite „?“)</div>
+
+    <div class="message" id="messageArea" role="status" aria-live="polite"></div>
+
+    <p class="hint">Pastaba: šis sprendimas veikia tik kliento pusėje (naršyklėje). PIN ir žinutė yra matomi, jei kas nors peržiūrės puslapio šaltinį.</p>
+    <p style="margin-top:8px"><a class="small" href="https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site" target="_blank" rel="noopener">Kaip publikuoti su GitHub Pages</a></p>
+  </div>
+
+  <script>
+    // ====== CONFIGURE HERE ======
+    const PASSCODE = '1234';
+    const SECRET_MESSAGE = `Sveikinu su prasidėjusiu rudeniu. Susitinkame Konstitucijos pr. 21, 20:00.`;
+    const HINT = 'PIN: 1 2 3 4';
+    // ============================
+
+    const inputs = [0,1,2,3].map(i => document.getElementById('d'+i));
+    const unlockBtn = document.getElementById('unlockBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const messageArea = document.getElementById('messageArea');
+    const hintArea = document.getElementById('hintArea');
+    const showHintBtn = document.getElementById('showHintBtn');
+
+    // handle input flow (auto-advance, numeric only)
+    inputs.forEach((inp, idx) => {
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^0-9]/g, '');
+        if (inp.value && idx < inputs.length - 1) inputs[idx+1].focus();
+      });
+
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !inp.value && idx > 0) {
+          inputs[idx-1].focus();
+        }
+        // allow numbers, backspace, tab, arrows, enter
+        if (/^[0-9]$/.test(e.key) || ['Backspace','Tab','Enter'].includes(e.key) || e.key.startsWith('Arrow')) {
+          return;
+        }
+        e.preventDefault();
+      });
+
+      // submit on Enter
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockBtn.click(); });
+    });
+
+    function getEntered() {
+      return inputs.map(i => i.value || '').join('');
+    }
+
+    function showMessage() {
+      messageArea.style.display = 'block';
+      messageArea.innerText = SECRET_MESSAGE;
+      messageArea.style.borderStyle = 'solid';
+      messageArea.style.borderColor = '#d1d5db';
+    }
+
+    function clearInputs() {
+      inputs.forEach(i => i.value = '');
+      messageArea.style.display = 'none';
+      inputs[0].focus();
+    }
+
+    unlockBtn.addEventListener('click', () => {
+      const entered = getEntered();
+      if (entered.length !== 4) { alert('Įveskite 4 skaitmenis.'); return; }
+      if (entered === PASSCODE) {
+        showMessage();
+      } else {
+        // shake animation
+        const el = document.getElementById('codeInput');
+        el.animate([
+          { transform: 'translateX(0)' },
+          { transform: 'translateX(-8px)' },
+          { transform: 'translateX(8px)' },
+          { transform: 'translateX(0)' }
+        ], { duration: 300 });
+        alert('Neteisingas PIN.');
+      }
+    });
+
+    clearBtn.addEventListener('click', clearInputs);
+    showHintBtn.addEventListener('click', () => { hintArea.innerText = HINT; });
+
+    // autofocus
+    inputs[0].focus();
+  </script>
+</body>
+</html>
